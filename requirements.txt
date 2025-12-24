@@ -1,0 +1,28 @@
+# 深度强化学习框架
+stable-baselines3>=2.0.0
+gymnasium>=0.29.0
+rl-baselines3-zoo>=2.0.0
+
+# 深度学习框架
+pytorch>=2.0.0
+
+# 游戏环境与渲染
+pygame>=2.3.0
+
+# 数据处理与可视化
+numpy>=1.23.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# 工具库
+argparse>=1.4.0
+logging>=0.5.1.2
+
+# 量子计算库
+pennylane>=0.32.0
+
+# 开发工具
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
