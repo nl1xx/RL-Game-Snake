@@ -77,7 +77,7 @@ python main.py train --algorithm sac  # 使用SAC算法
 python main.py train --algorithm td3  # 使用TD3算法
 
 # 多蛇对抗模式训练（2条蛇）
-python main.py train --algorithm ppo --num_snakes 2 --multi_agent
+python main.py train --algorithm ppo --num_snakes 2
 
 # 自定义参数训练
 python main.py train --algorithm ppo --grid_size 10 --mode feature --total_timesteps 1000000
