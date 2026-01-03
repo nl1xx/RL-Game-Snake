@@ -14,6 +14,7 @@ import gymnasium as gym
 # 确保能导入自定义环境
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from environment.snake_env import SnakeEnv
+from environment.multiagent_wrapper import make_multiagent_env
 
 def get_algorithm(algorithm_name):
     """根据算法名称返回对应的算法类"""
@@ -86,19 +87,43 @@ def train_agent(args):
     }
     
     # 创建并行环境进行训练
-    vec_env = make_vec_env(
-        'SnakeEnv-v1',
-        n_envs=args.n_envs,
-        env_kwargs=env_kwargs,
-        vec_env_cls=SubprocVecEnv
-    )
+    if args.multi_agent:
+        # 多智能体模式：使用包装器
+        def make_env(rank):
+            def _init():
+                env = make_multiagent_env(
+                    'SnakeEnv-v1',
+                    num_snakes=args.num_snakes,
+                    grid_size=args.grid_size,
+                    mode=args.mode
+                )
+                return env
+            return _init
+        
+        vec_env = SubprocVecEnv([make_env(i) for i in range(args.n_envs)])
+    else:
+        # 单智能体模式：直接创建环境
+        vec_env = make_vec_env(
+            'SnakeEnv-v1',
+            n_envs=args.n_envs,
+            env_kwargs=env_kwargs,
+            vec_env_cls=SubprocVecEnv
+        )
     
     # 如果是像素模式，对多帧进行堆叠（适用于DQN等需要时序信息的算法）
     if args.mode == 'pixel' and args.algorithm.lower() in ['dqn', 'a2c']:
         vec_env = VecFrameStack(vec_env, n_stack=4)
     
     # 创建评估环境
-    eval_env = Monitor(gym.make('SnakeEnv-v1', **env_kwargs))
+    if args.multi_agent:
+        eval_env = make_multiagent_env(
+            'SnakeEnv-v1',
+            num_snakes=args.num_snakes,
+            grid_size=args.grid_size,
+            mode=args.mode
+        )
+    else:
+        eval_env = Monitor(gym.make('SnakeEnv-v1', **env_kwargs))
     
     # 回调函数
     checkpoint_callback = CheckpointCallback(
@@ -184,7 +209,10 @@ def train_agent(args):
     model.set_logger(new_logger)
     
     # 开始训练
-    print(f"开始训练{args.algorithm.upper()}模型，模式: {args.mode}, 网格大小: {args.grid_size}")
+    agent_mode = "多智能体" if args.multi_agent else "单智能体"
+    print(f"开始训练{args.algorithm.upper()}模型，模式: {agent_mode}, 观察模式: {args.mode}, 网格大小: {args.grid_size}")
+    if args.multi_agent:
+        print(f"蛇的数量: {args.num_snakes}")
     print(f"日志保存到: {log_dir}")
     print(f"模型保存到: {os.path.join('models', f'{args.algorithm}_snake')}")
     

@@ -41,9 +41,7 @@ class SnakeAI:
         if self.model is None:
             raise ValueError("模型未加载")
         
-        # 确保观察格式正确
-        if isinstance(observation, tuple):
-            observation = observation[0]
+        obs = observation
         
         # 转换为模型期望的格式
         if self.mode == 'feature':
@@ -51,13 +49,13 @@ class SnakeAI:
             pass
         elif self.mode == 'pixel':
             # 像素观察需要添加批次维度
-            observation = np.expand_dims(observation, axis=0)
+            obs = np.expand_dims(obs, axis=0)
         elif self.mode == 'grid':
             # 网格观察需要添加批次维度
-            observation = np.expand_dims(observation, axis=0)
+            obs = np.expand_dims(obs, axis=0)
         
         # 使用模型预测动作
-        action, _ = self.model.predict(observation, deterministic=True)
+        action, _ = self.model.predict(obs, deterministic=True)
         
         return int(action)
     

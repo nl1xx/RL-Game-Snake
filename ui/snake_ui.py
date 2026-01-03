@@ -10,6 +10,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from controller.snake_ai import SnakeAI
 from environment.snake_env import SnakeEnv
+from environment.multiagent_wrapper import ParallelMultiAgentWrapper
 
 class SnakeUI:
     def __init__(self, grid_size=10, mode='feature', num_snakes=1, multi_agent=False):
@@ -79,6 +80,7 @@ class SnakeUI:
         if self.env:
             self.env.close()
         
+        # 创建环境（UI中不使用包装器，直接使用原始环境）
         self.env = SnakeEnv(
             render_mode=None,
             grid_size=self.grid_size,
@@ -142,8 +144,17 @@ class SnakeUI:
     
     def update(self):
         """更新游戏状态"""
-        if self.done:
+        # 检查游戏是否结束（处理多智能体模式的tuple done）
+        if isinstance(self.done, tuple):
+            all_done = all(self.done)
+        else:
+            all_done = self.done
+        
+        if all_done:
+            print("Game done, skipping update")
             return
+        
+        print(f"Step {self.step_count}: Updating...")
         
         # 获取动作
         if self.ai_mode and self.ai:
@@ -162,6 +173,7 @@ class SnakeUI:
                     action.append(0)  # 默认动作
             action = action[0] if len(action) == 1 else action
         else:
+            print("No action available")
             return  # 无动作，不更新
         
         # 执行动作
@@ -174,9 +186,15 @@ class SnakeUI:
         self.step_count += 1
         
         # 更新每条蛇的得分和奖励
+        scores = self.info.get('scores', [0] * self.num_snakes)
         for i in range(self.num_snakes):
-            self.score[i] = self.info.get(f'score_{i}', 0)
-            self.episode_reward[i] += reward[i] if isinstance(reward, list) else reward
+            self.score[i] = scores[i] if i < len(scores) else 0
+            if isinstance(reward, (list, tuple)):
+                self.episode_reward[i] += reward[i]
+            else:
+                self.episode_reward[i] += reward
+        
+        print(f"Step {self.step_count} completed")
     
     def render(self):
         """渲染游戏画面"""
@@ -292,7 +310,11 @@ class SnakeUI:
                     self.screen.blit(action_text, (panel_x + 10, 110 + self.num_snakes * 60 + i * 30))
         
         # 游戏状态
-        state_text = self.font.render(f"状态: {'结束' if self.done else '进行中'}", True, self.RED if self.done else self.GREEN)
+        if isinstance(self.done, tuple):
+            done_status = all(self.done)
+        else:
+            done_status = self.done
+        state_text = self.font.render(f"状态: {'结束' if done_status else '进行中'}", True, self.RED if done_status else self.GREEN)
         self.screen.blit(state_text, (panel_x + 10, 110 + self.num_snakes * 60 + self.num_snakes * 30))
         
         # 控制说明
