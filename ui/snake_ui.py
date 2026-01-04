@@ -151,7 +151,8 @@ class SnakeUI:
             all_done = self.done
         
         if all_done:
-            print("Game done, skipping update")
+            if self.step_count == 0:
+                print(f"Game ended immediately. done={self.done}, truncated={getattr(self, 'truncated', 'N/A')}")
             return
         
         print(f"Step {self.step_count}: Updating...")
@@ -163,6 +164,7 @@ class SnakeUI:
                 action = [self.ai.predict(obs) for obs in self.observation]
             else:
                 action = self.ai.predict(self.observation)
+            print(f"AI predicted action: {action}")
         elif any(a is not None for a in self.last_action):
             # 人工控制第一条蛇，其他蛇使用默认动作（0）
             action = []
@@ -182,6 +184,8 @@ class SnakeUI:
         else:
             self.observation, reward, self.done, truncated, self.info = self.env.step(action)
         
+        self.truncated = truncated
+        
         # 更新状态
         self.step_count += 1
         
@@ -194,7 +198,7 @@ class SnakeUI:
             else:
                 self.episode_reward[i] += reward
         
-        print(f"Step {self.step_count} completed")
+        print(f"Step {self.step_count} completed. done={self.done}, truncated={truncated}, reward={reward}")
     
     def render(self):
         """渲染游戏画面"""

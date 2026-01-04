@@ -14,7 +14,7 @@ import gymnasium as gym
 # 确保能导入自定义环境
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from environment.snake_env import SnakeEnv
-from environment.multiagent_wrapper import make_multiagent_env
+from environment.multiagent_wrapper import make_multiagent_env, DiscreteToContinuousActionWrapper
 
 def get_algorithm(algorithm_name):
     """根据算法名称返回对应的算法类"""
@@ -43,27 +43,65 @@ def get_policy(mode, algorithm_name):
 
 def get_policy_kwargs(mode, algorithm_name):
     """根据观察模式和算法设置策略网络参数"""
+    continuous_algorithms = ['ddpg', 'sac', 'td3']
+    
     if mode == 'feature':
-        return {
-            'net_arch': {
-                'pi': [64, 64],
-                'vf': [64, 64]
+        if algorithm_name.lower() == 'dqn':
+            return {
+                'net_arch': [64, 64]
             }
-        }
+        elif algorithm_name.lower() in continuous_algorithms:
+            return {
+                'net_arch': {
+                    'pi': [64, 64],
+                    'qf': [64, 64]
+                }
+            }
+        else:
+            return {
+                'net_arch': {
+                    'pi': [64, 64],
+                    'vf': [64, 64]
+                }
+            }
     elif mode == 'pixel':
-        return {
-            'net_arch': {
-                'pi': [128, 64],
-                'vf': [128, 64]
+        if algorithm_name.lower() == 'dqn':
+            return {
+                'net_arch': [128, 64]
             }
-        }
+        elif algorithm_name.lower() in continuous_algorithms:
+            return {
+                'net_arch': {
+                    'pi': [128, 64],
+                    'qf': [128, 64]
+                }
+            }
+        else:
+            return {
+                'net_arch': {
+                    'pi': [128, 64],
+                    'vf': [128, 64]
+                }
+            }
     elif mode == 'grid':
-        return {
-            'net_arch': {
-                'pi': [128, 64],
-                'vf': [128, 64]
+        if algorithm_name.lower() == 'dqn':
+            return {
+                'net_arch': [128, 64]
             }
-        }
+        elif algorithm_name.lower() in continuous_algorithms:
+            return {
+                'net_arch': {
+                    'pi': [128, 64],
+                    'qf': [128, 64]
+                }
+            }
+        else:
+            return {
+                'net_arch': {
+                    'pi': [128, 64],
+                    'vf': [128, 64]
+                }
+            }
     return {}
 
 def train_agent(args):
@@ -103,16 +141,28 @@ def train_agent(args):
         vec_env = SubprocVecEnv([make_env(i) for i in range(args.n_envs)])
     else:
         # 单智能体模式：直接创建环境
-        vec_env = make_vec_env(
-            'SnakeEnv-v1',
-            n_envs=args.n_envs,
-            env_kwargs=env_kwargs,
-            vec_env_cls=SubprocVecEnv
-        )
+        def make_env(rank):
+            def _init():
+                env = SnakeEnv(
+                    grid_size=args.grid_size,
+                    mode=args.mode,
+                    num_snakes=args.num_snakes,
+                    multi_agent=args.multi_agent
+                )
+                return env
+            return _init
+        
+        vec_env = SubprocVecEnv([make_env(i) for i in range(args.n_envs)])
     
     # 如果是像素模式，对多帧进行堆叠（适用于DQN等需要时序信息的算法）
     if args.mode == 'pixel' and args.algorithm.lower() in ['dqn', 'a2c']:
         vec_env = VecFrameStack(vec_env, n_stack=4)
+    
+    # 如果是DDPG、SAC、TD3算法，需要将离散动作空间转换为连续动作空间
+    if args.algorithm.lower() in ['ddpg', 'sac', 'td3']:
+        from stable_baselines3.common.vec_env import VecMonitor
+        vec_env = VecMonitor(vec_env)
+        vec_env = DiscreteToContinuousActionWrapper(vec_env)
     
     # 创建评估环境
     if args.multi_agent:
@@ -123,7 +173,12 @@ def train_agent(args):
             mode=args.mode
         )
     else:
-        eval_env = Monitor(gym.make('SnakeEnv-v1', **env_kwargs))
+        eval_env = Monitor(SnakeEnv(
+            grid_size=args.grid_size,
+            mode=args.mode,
+            num_snakes=args.num_snakes,
+            multi_agent=args.multi_agent
+        ))
     
     # 回调函数
     checkpoint_callback = CheckpointCallback(

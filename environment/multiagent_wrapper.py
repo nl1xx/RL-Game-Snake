@@ -1,6 +1,7 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
+from stable_baselines3.common.vec_env import VecEnvWrapper
 
 class MultiAgentWrapper(gym.Wrapper):
     """
@@ -207,3 +208,49 @@ def make_multiagent_env(env_id, num_snakes=2, grid_size=10, mode='feature', **kw
         **kwargs
     )
     return ParallelMultiAgentWrapper(env)
+
+
+class DiscreteToContinuousActionWrapper(VecEnvWrapper):
+    """
+    将离散动作空间转换为连续动作空间的包装器
+    用于支持DDPG、SAC、TD3等需要连续动作空间的算法
+    支持包装VecEnv
+    """
+    
+    def __init__(self, venv):
+        super().__init__(venv)
+        self.venv = venv
+        
+        # 获取原始离散动作空间
+        if isinstance(venv.action_space, spaces.Discrete):
+            self.n_actions = venv.action_space.n
+        elif isinstance(venv.action_space, spaces.Box):
+            # 如果已经是连续动作空间，直接使用
+            self.n_actions = venv.action_space.shape[0]
+            self.already_continuous = True
+        else:
+            raise ValueError("DiscreteToContinuousActionWrapper 只用于离散动作空间")
+        
+        # 设置连续动作空间（4个动作，每个动作对应一个连续值）
+        if not getattr(self, 'already_continuous', False):
+            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.n_actions,), dtype=np.float32)
+        
+        # 保持观察空间不变
+        self.observation_space = venv.observation_space
+    
+    def step_async(self, actions):
+        # 如果已经是连续动作空间，直接传递
+        if getattr(self, 'already_continuous', False):
+            return self.venv.step_async(actions)
+        
+        # 将连续动作转换为离散动作（选择最大值的索引）
+        discrete_actions = np.argmax(actions, axis=1)
+        
+        # 执行离散动作
+        self.venv.step_async(discrete_actions)
+    
+    def step_wait(self):
+        return self.venv.step_wait()
+    
+    def reset(self, seed=None, options=None):
+        return self.venv.reset()
