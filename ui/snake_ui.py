@@ -281,36 +281,36 @@ class SnakeUI:
         pygame.draw.rect(self.screen, self.GRAY, (panel_x, 0, panel_width, self.screen_size))
         
         # 标题
-        title_text = self.large_font.render("游戏信息", True, self.WHITE)
+        title_text = self.large_font.render("Game information", True, self.WHITE)
         self.screen.blit(title_text, (panel_x + 10, 10))
         
         # 得分（每条蛇的得分）
         for i in range(self.num_snakes):
             snake_color = self.snake_colors[i % len(self.snake_colors)]
-            score_text = self.font.render(f"蛇{i+1}得分: {self.score[i]}", True, snake_color)
+            score_text = self.font.render(f"Snake {i+1} Score: {self.score[i]}", True, snake_color)
             self.screen.blit(score_text, (panel_x + 10, 50 + i * 30))
         
         # 步数
-        step_text = self.font.render(f"步数: {self.step_count}", True, self.WHITE)
+        step_text = self.font.render(f"Steps: {self.step_count}", True, self.WHITE)
         self.screen.blit(step_text, (panel_x + 10, 50 + self.num_snakes * 30))
         
         # 奖励（每条蛇的奖励）
         for i in range(self.num_snakes):
             snake_color = self.snake_colors[i % len(self.snake_colors)]
-            reward_text = self.font.render(f"蛇{i+1}奖励: {self.episode_reward[i]:.2f}", True, snake_color)
+            reward_text = self.font.render(f"Snake {i+1} Reward: {self.episode_reward[i]:.2f}", True, snake_color)
             self.screen.blit(reward_text, (panel_x + 10, 80 + self.num_snakes * 30 + i * 30))
         
         # AI模式
-        ai_mode_text = self.font.render(f"AI模式: {'开启' if self.ai_mode else '关闭'}", True, self.GREEN if self.ai_mode else self.RED)
+        ai_mode_text = self.font.render(f"AI mode : {'Open ' if self.ai_mode else ' Close'}", True, self.GREEN if self.ai_mode else self.RED)
         self.screen.blit(ai_mode_text, (panel_x + 10, 80 + self.num_snakes * 60))
         
         # 最后动作
         if any(a is not None for a in self.last_action):
-            action_names = ['上', '右', '下', '左']
+            action_names = ['UP', 'Right', 'Down', 'Left']
             for i, a in enumerate(self.last_action):
                 if a is not None:
                     snake_color = self.snake_colors[i % len(self.snake_colors)]
-                    action_text = self.font.render(f"蛇{i+1}动作: {action_names[a]}", True, snake_color)
+                    action_text = self.font.render(f"Snake {i+1} Actions: {action_names[a]}", True, snake_color)
                     self.screen.blit(action_text, (panel_x + 10, 110 + self.num_snakes * 60 + i * 30))
         
         # 游戏状态
@@ -318,18 +318,18 @@ class SnakeUI:
             done_status = all(self.done)
         else:
             done_status = self.done
-        state_text = self.font.render(f"状态: {'结束' if done_status else '进行中'}", True, self.RED if done_status else self.GREEN)
+        state_text = self.font.render(f"status: {'End ' if done_status else 'In progress'}", True, self.RED if done_status else self.GREEN)
         self.screen.blit(state_text, (panel_x + 10, 110 + self.num_snakes * 60 + self.num_snakes * 30))
         
         # 控制说明
         pygame.draw.line(self.screen, self.WHITE, (panel_x + 10, 230), (panel_x + panel_width - 10, 230), 1)
         
         controls = [
-            "控制说明:",
-            "↑↓←→: 方向控制",
-            "R: 重置游戏",
-            "A: 切换AI模式",
-            "ESC: 退出游戏"
+            "Control instructions:",
+            "↑ ↓ ← →: Direction control",
+            "R: Reset the game",
+            "A: Switch AI mode",
+            "ESC: Exit the game"
         ]
         
         for i, control in enumerate(controls):
